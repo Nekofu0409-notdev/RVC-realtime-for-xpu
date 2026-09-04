@@ -24,7 +24,7 @@ https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
 
 Releasesから7zファイルをダウンロード、展開。
 
-その後setup.batを実行した後にgo-realtime_gui.batを実行するだけ。
+その後setup.batを実行した後にgo-realtime_gui.batを実行するだけ。GUIの使い方は本家参照。
 
 あと、トレーニングとかの部分は確認してないので削除してます。(面倒くさかったともいう)
 
