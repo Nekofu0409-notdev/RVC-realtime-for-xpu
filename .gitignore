@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+.venv/
+assets/hubert_base/pytorch_model.bin
+assets/rmvpe/rmvpe.pt
