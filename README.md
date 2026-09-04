@@ -30,6 +30,11 @@ Releasesから7zファイルをダウンロード、展開。
 
 </br>
 
+これも参考に :
+https://www.youtube.com/watch?v=Pjf4gTvB4QU
+
+</br>
+
 ## 確認済みのバグ
 
 声の太さを0にすると、少し機械音が混じる。
