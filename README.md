@@ -22,7 +22,7 @@ https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
 
 </br>
 
-Releasesから7zファイルをダウンロード。
+Releasesから7zファイルをダウンロード、展開。
 
 その後setup.batを実行した後にgo-realtime_gui.batを実行するだけ。
 
