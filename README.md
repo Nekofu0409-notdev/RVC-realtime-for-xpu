@@ -38,9 +38,11 @@ https://www.youtube.com/watch?v=Pjf4gTvB4QU
 
 ## 確認済みのバグ
 
-声の太さを0にすると、少し機械音が混じる。
+~~声の太さを0にすると、少し機械音が混じる。~~
 
-0以外だと発生しないので調べればわかるだろうが、そこまでの気力がないから君たちで頑張って。
+~~0以外だと発生しないので調べればわかるだろうが、そこまでの気力がないから君たちで頑張って。~~
+
+修正済み
 
 </br>
 
@@ -154,6 +156,118 @@ torch.xpu
 を使用する環境でリアルタイム推論できることを確認しました。
 
 つまり、XPU化そのものに関係する変更は「PyTorch XPU化」「XPU環境構築」「Conv1d padding=20 の回避」の3系統です。
+
+</br>
+
+6. 追記
+
+### XPU向け機械音対策
+
+### 修正箇所
+
+`infer/module/models.py`
+
+`GeneratorNSF.forward()` 内の `har_source` 処理を修正しました。
+
+#### 修正前
+
+```python
+har_source, noi_source, uv = self.m_source(f0, self.upp)
+har_source = har_source.transpose(1, 2)
+```
+
+#### 修正後
+
+`n_res` による長さ調整処理の後に、以下を追加しました。
+
+```python
+har_source = har_source.clone(memory_format=torch.contiguous_format)
+```
+
+最終的には以下の位置になります。
+
+```python
+har_source, noi_source, uv = self.m_source(f0, self.upp)
+har_source = har_source.transpose(1, 2)
+
+if n_res is not None:
+    n = int(n_res.item()) if isinstance(n_res, torch.Tensor) else int(n_res)
+
+    if n * self.upp != har_source.shape[-1]:
+        har_source = F.interpolate(
+            har_source,
+            size=n * self.upp,
+            mode="linear",
+        )
+
+    if n != x.shape[-1]:
+        x = F.interpolate(
+            x,
+            size=n,
+            mode="linear",
+        )
+
+har_source = har_source.clone(memory_format=torch.contiguous_format)
+
+x = self.conv_pre(x)
+```
+
+### 修正の目的
+
+`har_source` は `transpose(1, 2)` を通ることで、メモリ上の配置（stride）が変化します。
+
+Intel XPU環境では、この状態の `har_source` を後段の処理へ渡した場合、
+
+- 声の太さが `0`
+- 声の太さが `0` 未満
+
+のときに機械音が混じる問題が発生しました。
+
+そこで、
+
+```python
+har_source = har_source.clone(memory_format=torch.contiguous_format)
+```
+
+によって、`har_source` を連続したメモリ配置のテンソルとして作り直してから後段へ渡すようにしました。
+
+### 切り分け結果
+
+以下の変更では問題は解消しませんでした。
+
+```text
+x.contiguous()
+F.interpolate() のCPU化
+ups[0] のCPU化
+noise_convs[0] のCPU化
+resblocks のCPU化
+m_source のCPU化
+F0補正の無効化
+cache_pitchf の変更
+後段Resampleの変更
+```
+
+一方、
+
+```python
+har_source = har_source.clone(memory_format=torch.contiguous_format)
+```
+
+を追加したところ、**声の太さが0および0未満の場合に発生していた機械音が解消**しました。
+
+また、Decoder全体をCPUで実行した場合にも機械音が消えることを確認しています。
+
+### まとめ
+
+今回の修正は、RVCの音声処理そのものを変更するものではありません。
+
+`transpose()` 後の `har_source` を連続メモリ配置へ変換し、**Intel XPU上で後段の処理が不正なメモリレイアウトを扱うことによる音質異常を回避するための修正**です。
+
+追加した変更は以下の1行です。
+
+```python
+har_source = har_source.clone(memory_format=torch.contiguous_format)
+```
 
 </br>
 
