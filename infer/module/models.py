@@ -489,17 +489,6 @@ class GeneratorNSF(torch.nn.Module):
         g=None,
         n_res=None,
     ):
-        # def debug(name, tensor):
-        #     print(
-        #         name,
-        #         "mean=", tensor.mean().item(),
-        #         "std=", tensor.std().item(),
-        #         "min=", tensor.min().item(),
-        #         "max=", tensor.max().item(),
-        #         "device=", tensor.device,
-        #         "dtype=", tensor.dtype,
-        #     )
-
         har_source, noi_source, uv = self.m_source(f0, self.upp)
         har_source = har_source.transpose(1, 2)
 
@@ -520,6 +509,9 @@ class GeneratorNSF(torch.nn.Module):
                     mode="linear",
                 )
 
+        # added
+        har_source = har_source.clone(memory_format=torch.contiguous_format)
+
         x = self.conv_pre(x)
 
         if g is not None:
@@ -529,20 +521,7 @@ class GeneratorNSF(torch.nn.Module):
             zip(self.ups, self.noise_convs)
         ):
             x = F.leaky_relu(x, self.lrelu_slope)
-
-            # added
             x = ups(x)
-            # x = ups(x.cpu()).to(device=x.device, dtype=x.dtype)
-
-            # added
-            # x_source = noise_convs(har_source)
-
-            # if i == 0:
-            #     x_source = noise_convs(har_source.cpu()).to(
-            #         device=x.device, dtype=x.dtype
-            #     )
-            # else:
-            #     x_source = noise_convs(har_source)
 
             if i == 0:
                 x_source = F.conv1d(
@@ -749,7 +728,17 @@ class SynthesizerTrnMs256NSFsid(nn.Module):
             m_p, logs_p, x_mask = self.enc_p(phone, pitch, phone_lengths)
             z_p = (m_p + torch.exp(logs_p) * torch.randn_like(m_p) * 0.66666) * x_mask
             z = self.flow(z_p, x_mask, g=g, reverse=True)
+
+        # added
         o = self.dec(z * x_mask, nsff0, g=g, n_res=return_length2)
+
+        # o = self.dec(
+        #     (z * x_mask).cpu(),
+        #     nsff0.cpu(),
+        #     g=g.cpu(),
+        #     n_res=return_length2,
+        # ).to(z.device)
+
         return o, x_mask, (z, z_p, m_p, logs_p)
 
 

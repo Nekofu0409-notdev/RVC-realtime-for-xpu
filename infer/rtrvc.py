@@ -109,6 +109,8 @@ class RVC:
                 self.net_g, cpt = get_synthesizer(self.pth_path, self.device)
 
                 # added
+                # self.net_g.dec.m_source.cpu()
+                # self.net_g.dec.cpu()
                 # self.net_g.dec.ups.cpu()
                 # self.net_g.dec.resblocks.cpu()
                 # self.net_g.dec.noise_convs[0].cpu()
@@ -293,8 +295,10 @@ class RVC:
             printt(i18n("索引检索失败"))
         t3 = ttime()
         p_len = input_wav.shape[0] // 160
+
         factor = pow(2, self.formant_shift / 12)
         return_length2 = int(np.ceil(return_length * factor))
+
         if self.if_f0 == 1:
             f0_extractor_frame = block_frame_16k + 800
             if f0method == "rmvpe":
@@ -311,14 +315,6 @@ class RVC:
             self.cache_pitchf[4 - pitch.shape[0] :] = pitchf[3:-1]
             cache_pitch = self.cache_pitch[None, -p_len:]
             cache_pitchf = self.cache_pitchf[None, -p_len:] * return_length2 / return_length
-
-        # print(
-        #     "PITCH:",
-        #     "pitch min=", pitch.min().item(),
-        #     "pitch max=", pitch.max().item(),
-        #     "pitchf min=", pitchf.min().item(),
-        #     "pitchf max=", pitchf.max().item(),
-        # )
 
         t4 = ttime()
         feats = F.interpolate(feats.permute(0, 2, 1), scale_factor=2).permute(0, 2, 1)

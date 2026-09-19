@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 assets/hubert_base/pytorch_model.bin
 assets/rmvpe/rmvpe.pt
+configs/config.json
